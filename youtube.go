@@ -8,7 +8,7 @@ import (
 )
 	
 // Structure for parsing YouTube search results from JSON
-type YouTube_SearchResult struct {
+type youTubeSearchResult struct {
 	Items []struct {
 		Id struct {
 			Videoid string
@@ -26,8 +26,8 @@ type YouTube_SearchResult struct {
 	}
 }
 
-// Converts YouTube_SearchResult list into Assets list
-func YouTube_ConvertToAssets(data YouTube_SearchResult) []Asset{
+// Converts youTubeSearchResult list into Assets list
+func youTubeConvertToAssets(data youTubeSearchResult) []Asset{
 	var ret []Asset
 
 	for _, item := range data.Items {
@@ -48,12 +48,12 @@ func YouTube_ConvertToAssets(data YouTube_SearchResult) []Asset{
 
 //Main function - performs the search on YouTube based on query string
 // and returns the list of assets matching it
-func YouTube_PerformSearch(query string) ([]Asset, error) {
+func youTubePerformSearch(query string) ([]Asset, error) {
 	// TODO: Hard-coding API key is a bad idea, it should be in config file
-	var search_url = "https://www.googleapis.com/youtube/v3/search"+
+	var searchUrl = "https://www.googleapis.com/youtube/v3/search"+
 		"?part=snippet&"+
 		"key=AIzaSyDi74Dekt6FUhiK6K9c52Y01avYjvTgIto"
-	response, err := http.Get(search_url+"&q="+query)
+	response, err := http.Get(searchUrl+"&q="+query)
     if err != nil {
         return nil, err
     }
@@ -63,12 +63,16 @@ func YouTube_PerformSearch(query string) ([]Asset, error) {
 		return nil, err
 	}
 	
-	var data YouTube_SearchResult
+	var data youTubeSearchResult
 	err = json.Unmarshal(contents, &data)
 	if err != nil {
 		return nil, err
 	}
-	assets := YouTube_ConvertToAssets(data)
+	assets := youTubeConvertToAssets(data)
 	
 	return assets, nil
+}
+
+func YouTubeInit() {
+	searchFunctions = append(searchFunctions, youTubePerformSearch)
 }

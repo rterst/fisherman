@@ -18,15 +18,20 @@ type Asset struct {
 	Thumbnail   string
 }
 
+var searchFunctions = []func(string)([]Asset, error) {}
+
 // Performs search for assets from all sources
-func performSearchRequest(search_string string) (string, error) {
-//TODO: rewrite using plugin architecture
-	assets_youtube, err := YouTube_PerformSearch(search_string)
-	if err != nil {
-		return "", err
+func performSearchRequest(searchString string) (string, error) {
+	var allAssets []Asset
+	for _, searchFunction := range searchFunctions {
+		assets, err := searchFunction(searchString)
+		if err != nil {
+			fmt.Println("Error executing one of the searches:", err)
+		}
+		allAssets = append(allAssets, assets...)
 	}
 	
-	encoded, err := json.MarshalIndent(assets_youtube, "", "  ")
+	encoded, err := json.MarshalIndent(allAssets, "", "  ")
 	if err != nil {
 		return "", err
 	}
@@ -35,6 +40,9 @@ func performSearchRequest(search_string string) (string, error) {
 }
 
 func main() {
+	// Initialize all the search plugins
+	YouTubeInit()
+	
 	m := martini.Classic()
 	m.Get("/search", func(req *http.Request, writer http.ResponseWriter) (int, string) {
 		result, err := performSearchRequest(req.FormValue("q"))
@@ -47,6 +55,5 @@ func main() {
 		writer.Header().Set("Content-Type", "application/json")
 		return http.StatusOK, result
 	})
-  
 	m.Run()
 }
