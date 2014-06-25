@@ -6,7 +6,11 @@ import (
 	"io/ioutil"
 	"encoding/json"
 )
-	
+
+// Parent structure
+type YouTubeAssetGatherer struct {
+}
+
 // Structure for parsing YouTube search results from JSON
 type youTubeSearchResult struct {
 	Items []struct {
@@ -27,7 +31,7 @@ type youTubeSearchResult struct {
 }
 
 // Converts youTubeSearchResult list into Assets list
-func youTubeConvertToAssets(data youTubeSearchResult) []Asset{
+func (y YouTubeAssetGatherer) youTubeConvertToAssets(data youTubeSearchResult) []Asset{
 	var ret []Asset
 
 	for _, item := range data.Items {
@@ -48,7 +52,7 @@ func youTubeConvertToAssets(data youTubeSearchResult) []Asset{
 
 //Main function - performs the search on YouTube based on query string
 // and returns the list of assets matching it
-func youTubePerformSearch(query string) ([]Asset, error) {
+func (y YouTubeAssetGatherer) Search(query string) ([]Asset, error) {
 	// TODO: Hard-coding API key is a bad idea, it should be in config file
 	var searchUrl = "https://www.googleapis.com/youtube/v3/search"+
 		"?part=snippet&"+
@@ -68,11 +72,15 @@ func youTubePerformSearch(query string) ([]Asset, error) {
 	if err != nil {
 		return nil, err
 	}
-	assets := youTubeConvertToAssets(data)
+	assets := y.youTubeConvertToAssets(data)
 	
 	return assets, nil
 }
 
-func YouTubeInit() {
-	searchFunctions = append(searchFunctions, youTubePerformSearch)
+func (y YouTubeAssetGatherer) Init() {
+	// Empty for now
+}
+
+func init() {
+	assetGatherers = append(assetGatherers, YouTubeAssetGatherer{})
 }

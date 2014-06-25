@@ -18,13 +18,18 @@ type Asset struct {
 	Thumbnail   string
 }
 
-var searchFunctions = []func(string)([]Asset, error) {}
+type AssetGatherer interface {
+	Search(string) ([]Asset, error)
+	Init()
+}
+
+var assetGatherers = []AssetGatherer{}
 
 // Performs search for assets from all sources
 func performSearchRequest(searchString string) (string, error) {
 	var allAssets []Asset
-	for _, searchFunction := range searchFunctions {
-		assets, err := searchFunction(searchString)
+	for _, assetGatherer := range assetGatherers {
+		assets, err := assetGatherer.Search(searchString)
 		if err != nil {
 			fmt.Println("Error executing one of the searches:", err)
 		}
@@ -39,10 +44,7 @@ func performSearchRequest(searchString string) (string, error) {
 	return string(encoded), nil
 }
 
-func main() {
-	// Initialize all the search plugins
-	YouTubeInit()
-	
+func main() {	
 	m := martini.Classic()
 	m.Get("/search", func(req *http.Request, writer http.ResponseWriter) (int, string) {
 		result, err := performSearchRequest(req.FormValue("q"))
