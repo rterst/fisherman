@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/go-martini/martini"
 	"net/http"
-    "fmt"
-	"encoding/json"
 )
 
 // Generic asset struct
@@ -20,7 +20,7 @@ type Asset struct {
 
 type AssetGatherer interface {
 	Search(string) ([]Asset, error)
-	Init()         (error)
+	Init() error
 }
 
 var assetGatherers []AssetGatherer
@@ -35,16 +35,16 @@ func performSearchRequest(searchString string) (string, error) {
 		}
 		allAssets = append(allAssets, assets...)
 	}
-	
+
 	encoded, err := json.MarshalIndent(allAssets, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(encoded), nil
 }
 
-func main() {	
+func main() {
 	// Initialize all the asset gathering plugins
 	for _, assetGatherer := range assetGatherers {
 		err := assetGatherer.Init()
@@ -57,7 +57,7 @@ func main() {
 	m := martini.Classic()
 	m.Get("/search", func(req *http.Request, writer http.ResponseWriter) (int, string) {
 		result, err := performSearchRequest(req.FormValue("q"))
-		
+
 		if err != nil {
 			fmt.Println("error:", err)
 			return http.StatusInternalServerError, err.Error()

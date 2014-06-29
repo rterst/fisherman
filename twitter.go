@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"encoding/base64"
-	"bytes"
-	"io/ioutil"
-	"encoding/json"
 	"os"
 )
 
@@ -25,38 +25,39 @@ type twitterAuthResponse struct {
 type twitterSearchResult struct {
 	Statuses []struct {
 		Id_str string
-		Text string
-		User struct {
+		Text   string
+		User   struct {
 			Profile_image_url string
-			Name string
-			Id_str string
+			Name              string
+			Id_str            string
 		}
 	}
 }
 
 // Custom error object for this plugin
 type TwitterAssetGathererError struct {
-    msg string
+	msg string
 }
-func (e TwitterAssetGathererError) Error() string { return "[Twitter plugin] "+e.msg }
+
+func (e TwitterAssetGathererError) Error() string { return "[Twitter plugin] " + e.msg }
 
 // Converts twitterSearchResult list into Assets list
-func (this *TwitterAssetGatherer) convertToAssets(data twitterSearchResult) []Asset{
+func (this *TwitterAssetGatherer) convertToAssets(data twitterSearchResult) []Asset {
 	var ret []Asset
 
 	for _, item := range data.Statuses {
-		asset := Asset {
-			Title: item.Text,
-			Author: item.User.Name,
+		asset := Asset{
+			Title:       item.Text,
+			Author:      item.User.Name,
 			Description: item.Text,
-			SourceId: item.Id_str,
-			SourceURL: "http://twitter.com/"+item.User.Id_str+"/status/"+item.Id_str,
-			Source: "twitter",
-			Thumbnail: item.User.Profile_image_url,
+			SourceId:    item.Id_str,
+			SourceURL:   "http://twitter.com/" + item.User.Id_str + "/status/" + item.Id_str,
+			Source:      "twitter",
+			Thumbnail:   item.User.Profile_image_url,
 		}
 		ret = append(ret, asset)
 	}
-	
+
 	return ret
 }
 
@@ -77,15 +78,15 @@ func (this *TwitterAssetGatherer) Search(query string) ([]Asset, error) {
 	if err != nil {
 		return nil, TwitterAssetGathererError{err.Error()}
 	}
-	
+
 	responseJSON, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	if err != nil {
 		return nil, TwitterAssetGathererError{err.Error()}
 	}
 	if response.Status != "200 OK" {
-		return nil, TwitterAssetGathererError{"Search failed. Invalid response from server: "+response.Status+
-			"\n"+string(responseJSON)}
+		return nil, TwitterAssetGathererError{"Search failed. Invalid response from server: " + response.Status +
+			"\n" + string(responseJSON)}
 	}
 
 	var data twitterSearchResult
@@ -100,11 +101,11 @@ func (this *TwitterAssetGatherer) Search(query string) ([]Asset, error) {
 }
 
 // Initialization function
-func (this *TwitterAssetGatherer) Init() (error) {
+func (this *TwitterAssetGatherer) Init() error {
 	// Fetch apiKey and apiSecret from config file
 	type configuration struct {
-    	ApiKey    string
-    	ApiSecret string
+		ApiKey    string
+		ApiSecret string
 	}
 	file, err := os.Open("twitter.cfg")
 	if err != nil {
@@ -118,7 +119,7 @@ func (this *TwitterAssetGatherer) Init() (error) {
 	}
 
 	// Obtain authentication token from twitter server
-	bearerTokenBase64 := base64.StdEncoding.EncodeToString([]byte(conf.ApiKey+":"+conf.ApiSecret))
+	bearerTokenBase64 := base64.StdEncoding.EncodeToString([]byte(conf.ApiKey + ":" + conf.ApiSecret))
 	client := &http.Client{}
 	parameters := url.Values{}
 	parameters.Set("grant_type", "client_credentials")
