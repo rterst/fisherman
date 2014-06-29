@@ -20,10 +20,10 @@ type Asset struct {
 
 type AssetGatherer interface {
 	Search(string) ([]Asset, error)
-	Init()
+	Init()         (error)
 }
 
-var assetGatherers = []AssetGatherer{}
+var assetGatherers []AssetGatherer
 
 // Performs search for assets from all sources
 func performSearchRequest(searchString string) (string, error) {
@@ -45,6 +45,15 @@ func performSearchRequest(searchString string) (string, error) {
 }
 
 func main() {	
+	// Initialize all the asset gathering plugins
+	for _, assetGatherer := range assetGatherers {
+		err := assetGatherer.Init()
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+	}
+
+	// Register '/search' URI that displays result from all asset gatherers
 	m := martini.Classic()
 	m.Get("/search", func(req *http.Request, writer http.ResponseWriter) (int, string) {
 		result, err := performSearchRequest(req.FormValue("q"))

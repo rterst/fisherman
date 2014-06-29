@@ -2,16 +2,17 @@ package main
 
 import (
 	"net/http"
-//	"fmt"
 	"io/ioutil"
+	"os"
 	"encoding/json"
 )
 
 // Parent structure
 type YouTubeAssetGatherer struct {
+	apiKey string
 }
 
-// Structure for parsing YouTube search results from JSON
+// Structure used for parsing search results from server
 type youTubeSearchResult struct {
 	Items []struct {
 		Id struct {
@@ -30,8 +31,14 @@ type youTubeSearchResult struct {
 	}
 }
 
+// Custom error object for this plugin
+type YouTubeAssetGathererError struct {
+    msg string
+}
+func (e YouTubeAssetGathererError) Error() string { return "[YouTube plugin] "+e.msg }
+
 // Converts youTubeSearchResult list into Assets list
-func (y YouTubeAssetGatherer) youTubeConvertToAssets(data youTubeSearchResult) []Asset{
+func (this *YouTubeAssetGatherer) convertToAssets(data youTubeSearchResult) []Asset{
 	var ret []Asset
 
 	for _, item := range data.Items {
@@ -50,37 +57,56 @@ func (y YouTubeAssetGatherer) youTubeConvertToAssets(data youTubeSearchResult) [
 	return ret
 }
 
-//Main function - performs the search on YouTube based on query string
+// Main function - performs the search on YouTube based on query string
 // and returns the list of assets matching it
-func (y YouTubeAssetGatherer) Search(query string) ([]Asset, error) {
-	// TODO: Hard-coding API key is a bad idea, it should be in config file
+func (this *YouTubeAssetGatherer) Search(query string) ([]Asset, error) {
 	var searchUrl = "https://www.googleapis.com/youtube/v3/search"+
 		"?part=snippet&"+
-		"key=AIzaSyDi74Dekt6FUhiK6K9c52Y01avYjvTgIto"
+		"key="+this.apiKey
 	response, err := http.Get(searchUrl+"&q="+query)
     if err != nil {
-        return nil, err
+        return nil, YouTubeAssetGathererError{err.Error()}
     }
 	defer response.Body.Close()
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, YouTubeAssetGathererError{err.Error()}
 	}
 	
 	var data youTubeSearchResult
 	err = json.Unmarshal(contents, &data)
 	if err != nil {
-		return nil, err
+		return nil, YouTubeAssetGathererError{err.Error()}
 	}
-	assets := y.youTubeConvertToAssets(data)
+	assets := this.convertToAssets(data)
 	
 	return assets, nil
 }
 
-func (y YouTubeAssetGatherer) Init() {
-	// Empty for now
+// Initialization function
+func (this *YouTubeAssetGatherer) Init() (error){
+	// Fetch apiKey from config file
+	type configuration struct {
+    	Key    string
+	}
+	file, err := os.Open("youtube.cfg")
+	if err != nil {
+		return YouTubeAssetGathererError{err.Error()}
+	}
+	decoder := json.NewDecoder(file)
+	conf := configuration{}
+	err = decoder.Decode(&conf)
+	if err != nil {
+		return YouTubeAssetGathererError{err.Error()}
+	}
+
+	// Save apiKey for further use
+	this.apiKey = conf.Key
+
+	return nil
 }
 
 func init() {
-	assetGatherers = append(assetGatherers, YouTubeAssetGatherer{})
+	// Register plugin with the server
+	assetGatherers = append(assetGatherers, &YouTubeAssetGatherer{})
 }
